@@ -30,17 +30,6 @@ export const matchIdParamSchema = z.object({
   id: z.coerce.number().int().positive(),
 });
 
-/**
- * Helper to validate ISO date strings
- */
-const isValidIsoDateString = (value) => {
-  const date = new Date(value);
-
-  return (
-    !Number.isNaN(date.getTime()) &&
-    date.toISOString() === value
-  );
-};
 
 /**
  * Schema for creating a match
@@ -51,17 +40,9 @@ export const createMatchSchema = z
     homeTeam: z.string().trim().min(1, 'Home team is required'),
     awayTeam: z.string().trim().min(1, 'Away team is required'),
 
-    startTime: z
-      .string()
-      .refine(isValidIsoDateString, {
-        message: 'startTime must be a valid ISO date string',
-      }),
+    startTime: z.iso.datetime(),
 
-    endTime: z
-      .string()
-      .refine(isValidIsoDateString, {
-        message: 'endTime must be a valid ISO date string',
-      }),
+    endTime: z.iso.datetime(),
 
     homeScore: z.coerce.number().int().nonnegative().optional(),
     awayScore: z.coerce.number().int().nonnegative().optional(),
