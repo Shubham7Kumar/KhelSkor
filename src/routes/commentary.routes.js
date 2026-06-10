@@ -61,11 +61,12 @@ commentaryRouter.post('/', async (req, res) => {
     }
 
     try {
-        const { minute, ...rest } = bodyResult.data;
+        const { minute,metadata, ...rest } = bodyResult.data;
         const [result] = await db.insert(commentary).values({
             matchId: paramsResult.data.id,
             minute,
-            ...rest
+            ...rest,
+            ...(metadata !== undefined ? { metaData: metadata } : {}),
         }).returning();
 
         // just after creating we are triggering the broadcast 

@@ -6,7 +6,6 @@ const matchSubscribers = new Map();
 
 function subscribe(matchId, socket) {
      matchId = Number(matchId);
-     console.log('SUBSCRIBE', matchId, typeof matchId);
     if(!matchSubscribers.has(matchId)) {
         matchSubscribers.set(matchId, new Set());
     }
@@ -50,23 +49,13 @@ function broadcast(wss, payload){
 
 function broadcastToMatch(matchId, payload){
     matchId = Number(matchId);
-     console.log('BROADCAST', matchId, typeof matchId);
-
      
     const subscribers = matchSubscribers.get(matchId);
 
-    console.log(
-        'Subscriber count:',
-        subscribers?.size ?? 0
-    );
     if(!subscribers || subscribers.size === 0 ) return;
 
     const message = JSON.stringify(payload) ;
     for(const client of subscribers ){
-        console.log(
-            'Client state:',
-            client.readyState
-        );
         if(client.readyState === WebSocket.OPEN){
             client.send(message)
         }
@@ -75,6 +64,7 @@ function broadcastToMatch(matchId, payload){
 
 function handleMessage(socket, data) {
     let message;
+    const MAX_SUBSCRIPTIONS_PER_SOCKET = 200;
     try {
         message = JSON.parse(data.toString())
     } catch (error) {
@@ -86,6 +76,10 @@ function handleMessage(socket, data) {
     }
 
     if(message?.type === 'subscribe' && Number.isInteger(message.matchId)) {
+        if(socket.subscriptions.size >= MAX_SUBSCRIPTIONS_PER_SOCKET){
+            sendJson(socket, { type: 'error', message: 'TOO MANY SUBSCRIPTIONS' });
+            return;
+        }
         subscribe(message.matchId, socket);
         socket.subscriptions.add(message.matchId);
         sendJson(socket, { 
@@ -126,6 +120,8 @@ export function attachWebSocketServer(server) {
         const { pathname } = new URL(req.url, `http://${req.headers.host}`);
 
         if (pathname !== '/ws') {
+            socket.write('HTTP/1.1 404 Not Found\r\n\r\n');
+            socket.destroy();
             return;
         }
 
